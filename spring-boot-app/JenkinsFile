@@ -24,8 +24,15 @@ pipeline {
         SONAR_URL = "http://20.187.144.254:9000/"
       }
       steps {
-        withCredentials([string(credentialsId: 'sonarube', variable: 'SONAR_AUTH_TOKEN')]) {
-          sh 'cd spring-boot-app && mvn sonar:sonar -Dsonar.login=$SONAR_AUTH_TOKEN -Dsonar.host.url=${SONAR_URL}'
+        script {
+          // Run Sonar analysis inside a Maven image that uses OpenJDK 17.
+          // The sonar-maven-plugin was compiled for Java 17 (class file version 61.0),
+          // so the runtime must be Java 17 or newer to avoid UnsupportedClassVersionError.
+          withCredentials([string(credentialsId: 'sonarube', variable: 'SONAR_AUTH_TOKEN')]) {
+            docker.image('maven:3.8.8-openjdk-17').inside {
+              sh 'cd spring-boot-app && mvn -B sonar:sonar -Dsonar.login=$SONAR_AUTH_TOKEN -Dsonar.host.url=${SONAR_URL}'
+            }
+          }
         }
       }
     }
